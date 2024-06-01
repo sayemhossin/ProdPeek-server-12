@@ -1,4 +1,5 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const app = express()
 require('dotenv').config()
 const cors = require('cors');
@@ -23,12 +24,34 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
 
+    app.post('/jwt', async (req, res) => {
+        const user = req.body;
+        const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '365d' })
+        res.send({ token })
+      })
+  
 
 
+      
+    // middlewares
+    const verifyToken = (req, res, next) => {
+        if (!req.headers.authorization) {
+          return res.status(401).send({ message: 'unauthorized access' })
+        }
+        const token = req.headers.authorization.split(' ')[1];
+        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+          if (err) {
+            return res.status(401).send({ message: 'unauthorized access' })
+          }
+          req.decoded = decoded;
+          next()
+        })
+  
+      }
+  
 
 
 
