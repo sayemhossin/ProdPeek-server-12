@@ -11,7 +11,7 @@ app.use(express.json())
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ha1geqx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const client = new MongoClient(uri, {
@@ -60,13 +60,19 @@ async function run() {
             const result = await productsCollection.insertOne(product)
             res.send(result)
         })
-        app.get('/product', async (req, res) => {
-            const result = await productsCollection.find().toArray()
+        app.get('/my-product/:email', async (req, res) => {
+            const result = await productsCollection.find({ 'adder.email': req.params.email })
+                .sort({ status: 1 })
+                .toArray();
             res.send(result)
         })
 
-
-
+        app.delete('/product/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await productsCollection.deleteOne(query);
+            res.send(result);
+        });
 
 
 
