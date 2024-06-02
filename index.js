@@ -71,7 +71,7 @@ async function run() {
             const query = { _id: new ObjectId(id) }
             const result = await productsCollection.findOne(query)
             res.send(result)
-          })
+        })
 
         app.delete('/product/:id', async (req, res) => {
             const id = req.params.id;
@@ -80,7 +80,24 @@ async function run() {
             res.send(result);
         });
 
+        app.put('/product/:id', async (req, res) => {
+            const id = req.params.id
+            const product = req.body
+            const filter = { _id: new ObjectId(id) }
+            const options = { upsert: true }
+            const updatedProduct = {
+                $set: {
+                    productName:product.productName,
+                    tags:product.tags,
+                    description:product.description,
+                    link:product.link,
+                    productPhoto:product.productPhoto
+                }
+            }
+            const result = await productsCollection.updateOne(filter,updatedProduct,options)
+            res.send(result)
 
+        })
 
 
 
