@@ -67,20 +67,20 @@ async function run() {
             //  save user for first time
             const options = { upsert: true }
             const updateDoc = {
-              $set: {
-                ...user,
-              }
+                $set: {
+                    ...user,
+                }
             }
             const result = await usersCollection.updateOne(query, updateDoc, options)
             res.send((result))
-          })
-      
-          app.get('/user/:email', async (req, res) => {
+        })
+
+        app.get('/user/:email', async (req, res) => {
             const email = req.params.email
             const result = await usersCollection.findOne({ email })
             res.send(result)
-          })
-      
+        })
+
 
 
 
@@ -133,7 +133,36 @@ async function run() {
             res.send(result)
 
         })
+        app.get('/product', async (req, res) => {
+            const product = await productsCollection.find().toArray()
+            product.sort((a, b) => {
+                const orderStatus = {
+                    'pending': 1,
+                    'accept': 2,
+                    'reject': 3
+                }
+                return orderStatus[a.status] - orderStatus[b.status]
+            })
+            res.send(product)
+        })
 
+        app.patch('/reject-product/:id', async (req, res) => {
+            const { id } = req.params;
+            const result = await productsCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { status: 'reject' } }
+            );
+            res.send(result);
+        });
+
+        app.patch('/accept-product/:id', async (req, res) => {
+            const { id } = req.params;
+            const result = await productsCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { status: 'accept' } }
+            );
+            res.send(result);
+        });
 
 
 
