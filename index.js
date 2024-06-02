@@ -26,7 +26,7 @@ async function run() {
     try {
         await client.connect();
         const productsCollection = client.db('ProdPeek').collection('products')
-
+        const usersCollection = client.db('ProdPeek').collection('users')
 
 
         app.post('/jwt', async (req, res) => {
@@ -53,8 +53,43 @@ async function run() {
             })
         }
 
-        //  Product Section
 
+        //  users related api
+
+        app.put('/user', async (req, res) => {
+            const user = req.body
+            const query = { email: user?.email }
+            // check if user already exists in db
+            const isExist = await usersCollection.findOne(query)
+            if (isExist) {
+                return res.send({ message: 'user already exists', insertedId: null })
+            }
+            //  save user for first time
+            const options = { upsert: true }
+            const updateDoc = {
+              $set: {
+                ...user,
+              }
+            }
+            const result = await usersCollection.updateOne(query, updateDoc, options)
+            res.send((result))
+          })
+      
+          app.get('/user/:email', async (req, res) => {
+            const email = req.params.email
+            const result = await usersCollection.findOne({ email })
+            res.send(result)
+          })
+      
+
+
+
+
+
+
+
+
+        //  Product Section api
         app.post('/product', async (req, res) => {
             const product = req.body
             const result = await productsCollection.insertOne(product)
@@ -87,14 +122,14 @@ async function run() {
             const options = { upsert: true }
             const updatedProduct = {
                 $set: {
-                    productName:product.productName,
-                    tags:product.tags,
-                    description:product.description,
-                    link:product.link,
-                    productPhoto:product.productPhoto
+                    productName: product.productName,
+                    tags: product.tags,
+                    description: product.description,
+                    link: product.link,
+                    productPhoto: product.productPhoto
                 }
             }
-            const result = await productsCollection.updateOne(filter,updatedProduct,options)
+            const result = await productsCollection.updateOne(filter, updatedProduct, options)
             res.send(result)
 
         })
