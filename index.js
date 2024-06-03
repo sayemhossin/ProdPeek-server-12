@@ -190,7 +190,15 @@ async function run() {
 
 
         app.get('/featured', async (req, res) => {
-            const result = await featuredCollection.find().sort({ date: -1 }).toArray();
+            const search = req.query.search;
+            let query = {};
+          
+            if (typeof search === 'string') {
+              query = {
+                tags: { $regex: search, $options: 'i' }
+              };
+            }
+            const result = await featuredCollection.find(query).sort({ date: -1 }).toArray();
             res.send(result);
         });
 
