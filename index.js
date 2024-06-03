@@ -27,13 +27,8 @@ async function run() {
         await client.connect();
         const productsCollection = client.db('ProdPeek').collection('products')
         const usersCollection = client.db('ProdPeek').collection('users')
+        const featuredCollection = client.db('ProdPeek').collection('featured')
 
-
-        app.post('/jwt', async (req, res) => {
-            const user = req.body;
-            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '365d' })
-            res.send({ token })
-        })
 
 
 
@@ -41,17 +36,25 @@ async function run() {
         // middlewares
         const verifyToken = (req, res, next) => {
             if (!req.headers.authorization) {
-                return res.status(401).send({ message: 'unauthorized access' })
+                return res.status(401).send({ message: 'unauthorized access' });
             }
             const token = req.headers.authorization.split(' ')[1];
             jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
                 if (err) {
-                    return res.status(401).send({ message: 'unauthorized access' })
+                    return res.status(401).send({ message: 'unauthorized access' });
                 }
                 req.decoded = decoded;
-                next()
-            })
-        }
+                next();
+            });
+        };
+
+        
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '365d' })
+            res.send({ token })
+        })
+
 
 
         //  users related api
@@ -163,6 +166,72 @@ async function run() {
             );
             res.send(result);
         });
+
+
+        //featured product section 
+
+        app.patch('/featured-product/:id', async (req, res) => {
+            const { id } = req.params;
+            const product = await productsCollection.findOne({ _id: new ObjectId(id) });
+
+            if (!product) {
+                return res.status(404).send({ message: 'Product not found' });
+            }
+
+
+            const result = await featuredCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: product },
+                { upsert: true }
+            );
+
+            res.send(result);
+        });
+
+
+        app.get('/featured', async (req, res) => {
+            const result = await featuredCollection.find().sort({ date: -1 }).toArray();
+            res.send(result);
+        });
+
+
+       
+        app.get('/featured/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await featuredCollection.findOne(query)
+            res.send(result)
+        })
+
+
+        app.patch('/up-vote/:id', async (req, res) => {
+            const { id } = req.params;
+            const userId = req.body.email;
+        
+            const product = await featuredCollection.findOne({ _id: new ObjectId(id) });
+        
+            if (!product) {
+                return res.status(404).send({ message: 'Product not found' });
+            }
+        
+            if (product.upVoters && product.upVoters.includes(userId)) {
+                return res.status(400).send({ message: 'User has already upvoted this product' });
+            }
+        
+            const result = await featuredCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $inc: { upVote: 1 }, $push: { upVoters: userId } }
+            );
+        
+            res.send(result);
+        });
+        
+
+
+
+
+
+
 
 
 
