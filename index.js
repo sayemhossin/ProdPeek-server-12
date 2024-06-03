@@ -48,7 +48,7 @@ async function run() {
             });
         };
 
-        
+
         app.post('/jwt', async (req, res) => {
             const user = req.body;
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '365d' })
@@ -190,20 +190,25 @@ async function run() {
 
 
         app.get('/featured', async (req, res) => {
+            const size = parseInt(req.query.size)
+            const page = parseInt(req.query.page) - 1
             const search = req.query.search;
             let query = {};
-          
+
             if (typeof search === 'string') {
-              query = {
-                tags: { $regex: search, $options: 'i' }
-              };
+                query = {
+                    tags: { $regex: search, $options: 'i' }
+                };
             }
-            const result = await featuredCollection.find(query).sort({ date: -1 }).toArray();
+            const result = await featuredCollection.find(query).sort({ date: -1 })
+                .skip(page * size)
+                .limit(size)
+                .toArray()
             res.send(result);
         });
 
 
-       
+
         app.get('/featured/:id', async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
@@ -215,27 +220,30 @@ async function run() {
         app.patch('/up-vote/:id', async (req, res) => {
             const { id } = req.params;
             const userId = req.body.email;
-        
+
             const product = await featuredCollection.findOne({ _id: new ObjectId(id) });
-        
+
             if (!product) {
                 return res.status(404).send({ message: 'Product not found' });
             }
-        
+
             if (product.upVoters && product.upVoters.includes(userId)) {
                 return res.status(400).send({ message: 'User has already upvoted this product' });
             }
-        
+
             const result = await featuredCollection.updateOne(
                 { _id: new ObjectId(id) },
                 { $inc: { upVote: 1 }, $push: { upVoters: userId } }
             );
-        
+
             res.send(result);
         });
-        
 
 
+        app.get('/featured-count', async (req, res) => {
+            const count = await featuredCollection.countDocuments()
+            res.send({ count })
+        })
 
 
 
