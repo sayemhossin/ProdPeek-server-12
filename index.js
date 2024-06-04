@@ -262,10 +262,27 @@ async function run() {
             res.send(reviews);
         });
 
+
+
         // report Section
-        
+        app.post('/report', async (req, res) => {
+            const report = req.body
+            const result = await reportCollection.insertOne(report)
+            res.send(result)
+        })
+        app.get('/report', async (req, res) => {
+            const result = await reportCollection.find().toArray()
+            res.send(result)
+        })
 
+        app.delete('/report/:product_id', async (req, res) => {
+            const product_id = req.params.product_id;
 
+            await reportCollection.deleteOne({ product_id: product_id });
+            await featuredCollection.deleteOne({ _id: new ObjectId(product_id) });
+
+            res.send({ message: 'Product and report successfully deleted' });
+        });
 
 
 
