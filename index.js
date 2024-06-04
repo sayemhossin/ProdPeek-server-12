@@ -28,6 +28,8 @@ async function run() {
         const productsCollection = client.db('ProdPeek').collection('products')
         const usersCollection = client.db('ProdPeek').collection('users')
         const featuredCollection = client.db('ProdPeek').collection('featured')
+        const reviewCollection = client.db('ProdPeek').collection('review')
+        const reportCollection = client.db('ProdPeek').collection('report')
 
 
 
@@ -246,10 +248,22 @@ async function run() {
         })
 
 
+        // review section 
 
+        app.post('/review', async (req, res) => {
+            const product = req.body
+            const result = await reviewCollection.insertOne(product)
+            res.send(result)
+        })
 
+        app.get('/reviews/:product_id', async (req, res) => {
+            const product_id = req.params.product_id;
+            const reviews = await reviewCollection.find({ product_id: product_id }).sort({ date: -1 }).toArray();
+            res.send(reviews);
+        });
 
-
+        // report Section
+        
 
 
 
