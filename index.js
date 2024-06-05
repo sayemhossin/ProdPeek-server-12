@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const app = express()
 require('dotenv').config()
 const cors = require('cors');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000
 
 
@@ -30,6 +31,7 @@ async function run() {
         const featuredCollection = client.db('ProdPeek').collection('featured')
         const reviewCollection = client.db('ProdPeek').collection('review')
         const reportCollection = client.db('ProdPeek').collection('report')
+        const paymentCollection = client.db('ProdPeek').collection('payments')
 
 
 
@@ -85,9 +87,29 @@ async function run() {
             const result = await usersCollection.findOne({ email })
             res.send(result)
         })
+        app.get('/users', async (req, res) => {
+            const result = await usersCollection.find().toArray()
+            res.send(result)
+        })
+        
+        app.get('/users/:email', async (req, res) => {
+            const email = req.params.email
+            const result = await usersCollection.findOne({ email })
+            res.send(result)
+        })
 
 
-
+        app.patch('/users/admin/:id', async (req, res) => {
+            const id = req.params.id
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+              $set: {
+                role: 'admin'
+              }
+            }
+            const result = await usersCollection.updateOne(filter, updatedDoc)
+            res.send(result)
+          })
 
 
 
@@ -100,6 +122,10 @@ async function run() {
             const result = await productsCollection.insertOne(product)
             res.send(result)
         })
+
+
+
+
         app.get('/my-product/:email', async (req, res) => {
             const result = await productsCollection.find({ 'adder.email': req.params.email })
                 .sort({ status: 1 })
@@ -247,6 +273,17 @@ async function run() {
             res.send({ count })
         })
 
+        // trending
+        app.get('/trending', async (req, res) => {
+            const result = await featuredCollection.find().sort({ upVote: -1 }).toArray()
+            res.send(result)
+        })
+
+
+
+
+
+
 
         // review section 
 
@@ -283,6 +320,41 @@ async function run() {
 
             res.send({ message: 'Product and report successfully deleted' });
         });
+
+
+        // payment section
+
+        app.post('/create-payment-intent', async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+        });
+
+        app.post('/payments', async (req, res) => {
+            const payment = req.body;
+            const paymentResult = await paymentCollection.insertOne(payment);
+            
+            if (paymentResult.insertedId) {
+                const email = payment.email;
+                const filter = { email: email };
+                const updateDoc = {
+                    $set: {
+                        status: 'verified'
+                    }
+                };
+                await usersCollection.updateOne(filter, updateDoc);
+            }
+            res.send(paymentResult);
+        });
+        
 
 
 
