@@ -32,6 +32,7 @@ async function run() {
         const reviewCollection = client.db('ProdPeek').collection('review')
         const reportCollection = client.db('ProdPeek').collection('report')
         const paymentCollection = client.db('ProdPeek').collection('payments')
+        const couponCollection = client.db('ProdPeek').collection('coupon')
 
 
 
@@ -392,9 +393,46 @@ async function run() {
             res.send(paymentResult);
         });
 
+        //  coupon api
+        app.post('/coupon', async(req,res)=>{
+            const coupon = req.body
+            const result = await couponCollection.insertOne(coupon)
+            res.send(result)
+        })
+        app.get('/coupon', async(req,res)=>{
+            const result = await couponCollection.find().toArray()
+            res.send(result)
+        })
+        app.get('/coupon/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await couponCollection.findOne(query)
+            res.send(result)
+        })
+        app.put('/coupon/:id', async (req, res) => {
+            const id = req.params.id
+            const coupon = req.body
+            const filter = { _id: new ObjectId(id) }
+            const options = { upsert: true }
+            const updatedCoupon = {
+                $set: {
+                    code: coupon.code,
+                    date: coupon.date,
+                    description: coupon.description,
+                    amount: coupon.amount,
+                }
+            }
+            const result = await couponCollection.updateOne(filter, updatedCoupon, options)
+            res.send(result)
 
+        })
 
-
+        app.delete('/coupon/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await couponCollection.deleteOne(query);
+            res.send(result);
+        });
 
 
         // Send a ping to confirm a successful connection
