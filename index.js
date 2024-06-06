@@ -34,32 +34,56 @@ async function run() {
         const paymentCollection = client.db('ProdPeek').collection('payments')
         const couponCollection = client.db('ProdPeek').collection('coupon')
 
-
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '365d' })
+            res.send({ token })
+          })
+      
 
 
 
         // middlewares
         const verifyToken = (req, res, next) => {
+            console.log('inside verify token', req.headers.authorization)
             if (!req.headers.authorization) {
-                return res.status(401).send({ message: 'unauthorized access' });
+              return res.status(401).send({ message: 'unauthorized access' })
             }
             const token = req.headers.authorization.split(' ')[1];
             jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-                if (err) {
-                    return res.status(401).send({ message: 'unauthorized access' });
-                }
-                req.decoded = decoded;
-                next();
-            });
-        };
+              if (err) {
+                return res.status(401).send({ message: 'unauthorized access' })
+              }
+              req.decoded = decoded;
+              next()
+            })
+      
+          }
+     const verifyAdmin = async (req, res, next) => {
+        const email = req.decoded.email
+        const query = { email: email }
+        const user = await usersCollection.findOne(query)
+        const isAdmin = user?.role === 'admin'
+        if (!isAdmin) {
+          return res.status(403).send({ message: 'forbidden access' })
+        }
+        next()
+      }
+  
+     const verifyModerator = async (req, res, next) => {
+        const email = req.decoded.email
+        const query = { email: email }
+        const user = await usersCollection.findOne(query)
+        const isAdmin = user?.role === 'moderator'
+        if (!isAdmin) {
+          return res.status(403).send({ message: 'forbidden access' })
+        }
+        next()
+      }
+  
+      
 
-
-        app.post('/jwt', async (req, res) => {
-            const user = req.body;
-            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '365d' })
-            res.send({ token })
-        })
-
+      
 
 
         //  users related api
@@ -88,7 +112,7 @@ async function run() {
             const result = await usersCollection.findOne({ email })
             res.send(result)
         })
-        app.get('/users', async (req, res) => {
+        app.get('/users',verifyToken,verifyAdmin, async (req, res) => {
             const result = await usersCollection.find().toArray()
             res.send(result)
         })
@@ -126,7 +150,7 @@ async function run() {
 
 
         //  statistics 
-        app.get('/statistics', async (req, res) => {
+        app.get('/statistics',verifyToken, async (req, res) => {
             const totalUsers = await usersCollection.countDocuments()
             const totalReviews = await reviewCollection.countDocuments()
             const totalProducts = await featuredCollection.countDocuments()
@@ -310,6 +334,7 @@ async function run() {
             const count = await featuredCollection.countDocuments()
             res.send({ count })
         })
+
 
         // trending
         app.get('/trending', async (req, res) => {
