@@ -7,7 +7,14 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000
 
 
-app.use(cors())
+app.use(cors({
+    origin:[
+      'http://localhost:5173',
+      'https://prodpeek-5820d.web.app',
+      'https://prodpeek-5820d.firebaseapp.com'
+    ],
+    credentials: true
+  }))
 app.use(express.json())
 
 
@@ -45,7 +52,6 @@ async function run() {
 
         // middlewares
         const verifyToken = (req, res, next) => {
-            console.log('inside verify token', req.headers.authorization)
             if (!req.headers.authorization) {
               return res.status(401).send({ message: 'unauthorized access' })
             }
@@ -150,7 +156,7 @@ async function run() {
 
 
         //  statistics 
-        app.get('/statistics',verifyToken, async (req, res) => {
+        app.get('/statistics',verifyToken,verifyAdmin, async (req, res) => {
             const totalUsers = await usersCollection.countDocuments()
             const totalReviews = await reviewCollection.countDocuments()
             const totalProducts = await featuredCollection.countDocuments()
@@ -226,7 +232,7 @@ async function run() {
             res.send(result)
 
         })
-        app.get('/product', async (req, res) => {
+        app.get('/product',verifyToken,verifyModerator, async (req, res) => {
             const product = await productsCollection.find().toArray()
             product.sort((a, b) => {
                 const orderStatus = {
@@ -335,7 +341,6 @@ async function run() {
             res.send({ count })
         })
 
-
         // trending
         app.get('/trending', async (req, res) => {
             const result = await featuredCollection.find().sort({ upVote: -1 }).toArray()
@@ -370,7 +375,7 @@ async function run() {
             const result = await reportCollection.insertOne(report)
             res.send(result)
         })
-        app.get('/report', async (req, res) => {
+        app.get('/report',verifyToken,verifyModerator, async (req, res) => {
             const result = await reportCollection.find().toArray()
             res.send(result)
         })
